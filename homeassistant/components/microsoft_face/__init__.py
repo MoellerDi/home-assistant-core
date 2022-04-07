@@ -27,6 +27,8 @@ ATTR_GROUP = "group"
 ATTR_PERSON = "person"
 
 CONF_AZURE_REGION = "azure_region"
+CONF_AZURE_DETECTION_MODEL = "azure_detection_model"
+CONF_AZURE_RECOGNITION_MODEL = "azure_recognition_model"
 
 DATA_MICROSOFT_FACE = "microsoft_face"
 DEFAULT_TIMEOUT = 10
@@ -47,6 +49,12 @@ CONFIG_SCHEMA = vol.Schema(
             {
                 vol.Required(CONF_API_KEY): cv.string,
                 vol.Optional(CONF_AZURE_REGION, default="westus"): cv.string,
+                vol.Optional(
+                    CONF_AZURE_DETECTION_MODEL, default="detection_01"
+                ): cv.string,
+                vol.Optional(
+                    CONF_AZURE_RECOGNITION_MODEL, default="recognition_01"
+                ): cv.string,
                 vol.Optional(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): cv.positive_int,
             }
         )
@@ -77,6 +85,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     face = MicrosoftFace(
         hass,
         config[DOMAIN].get(CONF_AZURE_REGION),
+        config[DOMAIN].get(CONF_AZURE_DETECTION_MODEL),
+        config[DOMAIN].get(CONF_AZURE_RECOGNITION_MODEL),
         config[DOMAIN].get(CONF_API_KEY),
         config[DOMAIN].get(CONF_TIMEOUT),
         entities,
@@ -247,15 +257,36 @@ class MicrosoftFaceGroupEntity(Entity):
 class MicrosoftFace:
     """Microsoft Face api for Home Assistant."""
 
-    def __init__(self, hass, server_loc, api_key, timeout, entities):
+    def __init__(
+        self,
+        hass,
+        server_loc,
+        detection_model,
+        recognition_model,
+        api_key,
+        timeout,
+        entities,
+    ):
         """Initialize Microsoft Face api."""
         self.hass = hass
         self.websession = async_get_clientsession(hass)
         self.timeout = timeout
         self._api_key = api_key
         self._server_url = f"https://{server_loc}.{FACE_API_URL}"
+        self._detection_model = detection_model
+        self._recognition_model = recognition_model
         self._store = {}
         self._entities = entities
+
+    @property
+    def detection_model(self):
+        """Return Azure detectionModel."""
+        return self._detection_model
+
+    @property
+    def recognition_model(self):
+        """Return Azure recognitionModel."""
+        return self._recognition_model
 
     @property
     def store(self):
