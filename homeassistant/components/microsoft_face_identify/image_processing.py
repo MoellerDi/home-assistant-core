@@ -91,7 +91,16 @@ class MicrosoftFaceIdentifyEntity(ImageProcessingFaceEntity):
         """
         detect = []
         try:
-            face_data = await self._api.call_api("post", "detect", image, binary=True)
+            face_data = await self._api.call_api(
+                "post",
+                "detect",
+                image,
+                binary=True,
+                params={
+                    "detectionModel": self._api.detection_model,
+                    "recognitionModel": self._api.recognition_model,
+                },
+            )
 
             if face_data:
                 face_ids = [data["faceId"] for data in face_data]

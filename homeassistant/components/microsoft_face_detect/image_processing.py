@@ -22,7 +22,38 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
-SUPPORTED_ATTRIBUTES = [ATTR_AGE, ATTR_GENDER, ATTR_GLASSES]
+ATTR_MASK = "mask"
+ATTR_HEADPOSE = "headPose"
+ATTR_SMILE = "smile"
+ATTR_FACIAL_HAIR = "facialHair"
+ATTR_EMOTION = "emotion"
+ATTR_HAIR = "hair"
+ATTR_MAKEUP = "makeup"
+ATTR_OCCLUSION = "occlusion"
+ATTR_ACCESSORIES = "accessories"
+ATTR_BLUR = "blur"
+ATTR_EXPOSURE = "exposure"
+ATTR_NOISE = "noise"
+ATTR_QUALITY_FOR_RECOGNITION = "qualityForRecognition"
+
+SUPPORTED_ATTRIBUTES = [
+    ATTR_AGE,
+    ATTR_GENDER,
+    ATTR_GLASSES,
+    ATTR_MASK,
+    ATTR_HEADPOSE,
+    ATTR_SMILE,
+    ATTR_FACIAL_HAIR,
+    ATTR_EMOTION,
+    ATTR_HAIR,
+    ATTR_MAKEUP,
+    ATTR_OCCLUSION,
+    ATTR_ACCESSORIES,
+    ATTR_BLUR,
+    ATTR_EXPOSURE,
+    ATTR_NOISE,
+    ATTR_QUALITY_FOR_RECOGNITION,
+]
 
 CONF_ATTRIBUTES = "attributes"
 DEFAULT_ATTRIBUTES = [ATTR_AGE, ATTR_GENDER]
@@ -104,7 +135,11 @@ class MicrosoftFaceDetectEntity(ImageProcessingFaceEntity):
                 "detect",
                 image,
                 binary=True,
-                params={"returnFaceAttributes": ",".join(self._attributes)},
+                params={
+                    "returnFaceAttributes": ",".join(self._attributes),
+                    "detectionModel": self._api.detection_model,
+                    "recognitionModel": self._api.recognition_model,
+                },
             )
 
         except HomeAssistantError as err:

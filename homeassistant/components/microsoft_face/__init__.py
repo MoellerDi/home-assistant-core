@@ -29,6 +29,8 @@ ATTR_PERSON = "person"
 CONF_AZURE_REGION = "azure_region"
 CONF_AZURE_DETECTION_MODEL = "azure_detection_model"
 CONF_AZURE_RECOGNITION_MODEL = "azure_recognition_model"
+DEFAULT_AZURE_DETECTION_MODEL = "detection_01"
+DEFAULT_AZURE_RECOGNITION_MODEL = "recognition_01"
 
 DATA_MICROSOFT_FACE = "microsoft_face"
 DEFAULT_TIMEOUT = 10
@@ -50,10 +52,11 @@ CONFIG_SCHEMA = vol.Schema(
                 vol.Required(CONF_API_KEY): cv.string,
                 vol.Optional(CONF_AZURE_REGION, default="westus"): cv.string,
                 vol.Optional(
-                    CONF_AZURE_DETECTION_MODEL, default="detection_01"
+                    CONF_AZURE_DETECTION_MODEL, default=DEFAULT_AZURE_DETECTION_MODEL
                 ): cv.string,
                 vol.Optional(
-                    CONF_AZURE_RECOGNITION_MODEL, default="recognition_01"
+                    CONF_AZURE_RECOGNITION_MODEL,
+                    default=DEFAULT_AZURE_RECOGNITION_MODEL,
                 ): cv.string,
                 vol.Optional(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): cv.positive_int,
             }
@@ -107,10 +110,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         g_id = slugify(name)
 
         try:
-            await face.call_api("put", f"persongroups/{g_id}", {"name": name})
+            await face.call_api(
+                "put",
+                f"persongroups/{g_id}",
+                {"name": name, "recognitionModel": face.recognition_model},
+            )
             face.store[g_id] = {}
 
-            entities[g_id] = MicrosoftFaceGroupEntity(hass, face, g_id, name)
+            entities[g_id] = MicrosoftFaceGroupEntity(
+                hass, face, g_id, name, face.detection_model
+            )
             entities[g_id].async_write_ha_state()
         except HomeAssistantError as err:
             _LOGGER.error("Can't create group '%s' with error: %s", g_id, err)
@@ -201,6 +210,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 f"persongroups/{g_id}/persons/{p_id}/persistedFaces",
                 image.content,
                 binary=True,
+                params={"detectionModel": face.detection_model},
             )
         except HomeAssistantError as err:
             _LOGGER.error(
@@ -217,12 +227,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 class MicrosoftFaceGroupEntity(Entity):
     """Person-Group state/data Entity."""
 
-    def __init__(self, hass, api, g_id, name):
+    def __init__(
+        self, hass, api, g_id, name, recognition_model=DEFAULT_AZURE_RECOGNITION_MODEL
+    ):
         """Initialize person/group entity."""
         self.hass = hass
         self._api = api
         self._id = g_id
         self._name = name
+        self._recognition_model = recognition_model
 
     @property
     def name(self):
@@ -243,6 +256,11 @@ class MicrosoftFaceGroupEntity(Entity):
     def should_poll(self):
         """Return True if entity has to be polled for state."""
         return False
+
+    @property
+    def state_attributes(self):
+        """Return device specific state attributes."""
+        return {"recognition_model": self._recognition_model}
 
     @property
     def extra_state_attributes(self):
@@ -295,14 +313,18 @@ class MicrosoftFace:
 
     async def update_store(self):
         """Load all group/person data into local store."""
-        groups = await self.call_api("get", "persongroups")
+        groups = await self.call_api(
+            "get",
+            "persongroups",
+            params={"returnRecognitionModel": "true"},
+        )
 
         tasks = []
         for group in groups:
             g_id = group["personGroupId"]
             self._store[g_id] = {}
             self._entities[g_id] = MicrosoftFaceGroupEntity(
-                self.hass, self, g_id, group["name"]
+                self.hass, self, g_id, group["name"], group["recognitionModel"]
             )
 
             persons = await self.call_api("get", f"persongroups/{g_id}/persons")
