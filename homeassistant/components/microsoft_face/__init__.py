@@ -26,9 +26,9 @@ ATTR_CAMERA_ENTITY = "camera_entity"
 ATTR_GROUP = "group"
 ATTR_PERSON = "person"
 
-CONF_AZURE_REGION = "azure_region"
 CONF_AZURE_DETECTION_MODEL = "azure_detection_model"
 CONF_AZURE_RECOGNITION_MODEL = "azure_recognition_model"
+CONF_AZURE_REGION = "azure_region"
 DEFAULT_AZURE_DETECTION_MODEL = "detection_01"
 DEFAULT_AZURE_RECOGNITION_MODEL = "recognition_01"
 

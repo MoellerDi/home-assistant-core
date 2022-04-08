@@ -22,37 +22,37 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
-ATTR_MASK = "mask"
-ATTR_HEADPOSE = "headPose"
-ATTR_SMILE = "smile"
-ATTR_FACIAL_HAIR = "facialHair"
-ATTR_EMOTION = "emotion"
-ATTR_HAIR = "hair"
-ATTR_MAKEUP = "makeup"
-ATTR_OCCLUSION = "occlusion"
 ATTR_ACCESSORIES = "accessories"
 ATTR_BLUR = "blur"
+ATTR_EMOTION = "emotion"
 ATTR_EXPOSURE = "exposure"
+ATTR_FACIAL_HAIR = "facialHair"
+ATTR_HAIR = "hair"
+ATTR_HEADPOSE = "headPose"
+ATTR_MAKEUP = "makeup"
+ATTR_MASK = "mask"
 ATTR_NOISE = "noise"
+ATTR_OCCLUSION = "occlusion"
 ATTR_QUALITY_FOR_RECOGNITION = "qualityForRecognition"
+ATTR_SMILE = "smile"
 
 SUPPORTED_ATTRIBUTES = [
+    ATTR_ACCESSORIES,
     ATTR_AGE,
+    ATTR_BLUR,
+    ATTR_EMOTION,
+    ATTR_EXPOSURE,
+    ATTR_FACIAL_HAIR,
     ATTR_GENDER,
     ATTR_GLASSES,
-    ATTR_MASK,
-    ATTR_HEADPOSE,
-    ATTR_SMILE,
-    ATTR_FACIAL_HAIR,
-    ATTR_EMOTION,
     ATTR_HAIR,
+    ATTR_HEADPOSE,
     ATTR_MAKEUP,
-    ATTR_OCCLUSION,
-    ATTR_ACCESSORIES,
-    ATTR_BLUR,
-    ATTR_EXPOSURE,
+    ATTR_MASK,
     ATTR_NOISE,
+    ATTR_OCCLUSION,
     ATTR_QUALITY_FOR_RECOGNITION,
+    ATTR_SMILE,
 ]
 
 CONF_ATTRIBUTES = "attributes"
