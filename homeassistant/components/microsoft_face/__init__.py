@@ -3,24 +3,15 @@ from __future__ import annotations
 
 import asyncio
 import io
-import json
 import logging
 
-import aiohttp
-from aiohttp.hdrs import CONTENT_TYPE
-import async_timeout
 from azure.cognitiveservices.vision.face import FaceClient
-
-# from azure.cognitiveservices.vision.face.models import (
-#    Person,
-#    QualityForRecognition,
-#    TrainingStatusType,
-# )
+from azure.cognitiveservices.vision.face.models import Person, PersonGroup
 from msrest.authentication import CognitiveServicesCredentials
 import voluptuous as vol
 
 from homeassistant.components import camera
-from homeassistant.const import ATTR_NAME, CONF_API_KEY, CONF_TIMEOUT, CONTENT_TYPE_JSON
+from homeassistant.const import ATTR_NAME, CONF_API_KEY, CONF_TIMEOUT
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -179,7 +170,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         g_id = service.data[ATTR_GROUP]
 
         try:
-            person = await hass.async_add_executor_job(
+            person: Person = await hass.async_add_executor_job(
                 face.face_client.person_group_person.create, g_id, name
             )
 
@@ -336,11 +327,12 @@ class MicrosoftFace:
 
     async def update_store(self):
         """Load all group/person data into local store."""
-        groups = await self.hass.async_add_executor_job(
+        groups: PersonGroup = await self.hass.async_add_executor_job(
             self.face_client.person_group.list, None, None, True
         )
 
         tasks = []
+        group: PersonGroup
         for group in groups:
             self._store[group.person_group_id] = {}
             self._entities[group.person_group_id] = MicrosoftFaceGroupEntity(
@@ -351,10 +343,11 @@ class MicrosoftFace:
                 group.recognition_model,
             )
 
-            persons = await self.hass.async_add_executor_job(
+            persons: Person = await self.hass.async_add_executor_job(
                 self.face_client.person_group_person.list, group.person_group_id
             )
 
+            person: Person
             for person in persons:
                 self._store[group.person_group_id][person.name] = person.person_id
 
@@ -366,44 +359,3 @@ class MicrosoftFace:
 
         if tasks:
             await asyncio.wait(tasks)
-
-    async def call_api(self, method, function, data=None, binary=False, params=None):
-        """Make an api call."""
-        headers = {"Ocp-Apim-Subscription-Key": self._api_key}
-        url = self._server_url.format(function)
-
-        payload = None
-        if binary:
-            headers[CONTENT_TYPE] = "application/octet-stream"
-            payload = data
-        else:
-            headers[CONTENT_TYPE] = CONTENT_TYPE_JSON
-            if data is not None:
-                payload = json.dumps(data).encode()
-            else:
-                payload = None
-
-        try:
-            async with async_timeout.timeout(self.timeout):
-                response = await getattr(self.websession, method)(
-                    url, data=payload, headers=headers, params=params
-                )
-
-                answer = await response.json()
-
-            _LOGGER.debug("Read from microsoft face api: %s", answer)
-            if response.status < 300:
-                return answer
-
-            _LOGGER.warning(
-                "Error %d microsoft face api %s", response.status, response.url
-            )
-            raise HomeAssistantError(answer["error"]["message"])
-
-        except aiohttp.ClientError:
-            _LOGGER.warning("Can't connect to microsoft face api")
-
-        except asyncio.TimeoutError:
-            _LOGGER.warning("Timeout from microsoft face api %s", response.url)
-
-        raise HomeAssistantError("Network error on microsoft face api.")
