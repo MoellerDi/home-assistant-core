@@ -178,11 +178,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         g_id = service.data[ATTR_GROUP]
 
         try:
-            user_data = await face.call_api(
-                "post", f"persongroups/{g_id}/persons", {"name": name}
+            person = await hass.async_add_executor_job(
+                face.face_client.person_group_person.create, g_id, name
             )
 
-            face.store[g_id][name] = user_data["personId"]
+            face.store[g_id][name] = person.person_id
             entities[g_id].async_write_ha_state()
         except HomeAssistantError as err:
             _LOGGER.error("Can't create person '%s' with error: %s", name, err)
