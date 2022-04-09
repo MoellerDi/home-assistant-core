@@ -198,7 +198,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         p_id = face.store[g_id].get(name)
 
         try:
-            await face.call_api("delete", f"persongroups/{g_id}/persons/{p_id}")
+            await hass.async_add_executor_job(
+                face.face_client.person_group_person.delete, g_id, p_id
+            )
 
             face.store[g_id].pop(name)
             entities[g_id].async_write_ha_state()
