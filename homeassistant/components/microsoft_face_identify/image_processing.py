@@ -1,6 +1,7 @@
 """Component that will help set the Microsoft face for verify processing."""
 from __future__ import annotations
 
+import io
 import logging
 
 import voluptuous as vol
@@ -91,23 +92,41 @@ class MicrosoftFaceIdentifyEntity(ImageProcessingFaceEntity):
         """
         detect = []
         try:
-            face_data = await self._api.call_api(
-                "post",
-                "detect",
-                image,
-                binary=True,
-                params={
-                    "detectionModel": self._api.detection_model,
-                    "recognitionModel": self._api.recognition_model,
-                },
+            # face_data = await self._api.call_api(
+            #     "post",
+            #     "detect",
+            #     image,
+            #     binary=True,
+            #     params={
+            #         "detectionModel": self._api.detection_model,
+            #         "recognitionModel": self._api.recognition_model,
+            #     },
+            # )
+            detected_face = await self.hass.async_add_executor_job(
+                self._api.face_client.face.detect_with_stream,
+                io.BytesIO(bytearray(image)),
+                True,
+                False,
+                None,
+                self._api.recognition_model,
+                True,
+                self._api.detection_model,
             )
 
-            if face_data:
-                face_ids = [data["faceId"] for data in face_data]
-                detect = await self._api.call_api(
-                    "post",
-                    "identify",
-                    {"faceIds": face_ids, "personGroupId": self._face_group},
+            # if face_data:
+            #     face_ids = [data["faceId"] for data in face_data]
+            #     detect = await self._api.call_api(
+            #         "post",
+            #         "identify",
+            #         {"faceIds": face_ids, "personGroupId": self._face_group},
+            #     )
+            if detected_face:
+                face_ids = []
+                for data in detected_face:
+                    face_ids.append(data.face_id)
+                # face_ids = [data["faceId"] for data in detected_face]
+                detect = await self.hass.async_add_executor_job(
+                    self._api.face_client.face.identify, face_ids, self._face_group
                 )
 
         except HomeAssistantError as err:
@@ -119,18 +138,18 @@ class MicrosoftFaceIdentifyEntity(ImageProcessingFaceEntity):
         total = 0
         for face in detect:
             total += 1
-            if not face["candidates"]:
+            if not face.candidates:
                 continue
 
-            data = face["candidates"][0]
+            data = face.candidates[0]
             name = ""
             for s_name, s_id in self._api.store[self._face_group].items():
-                if data["personId"] == s_id:
+                if data.person_id == s_id:
                     name = s_name
                     break
 
             known_faces.append(
-                {ATTR_NAME: name, ATTR_CONFIDENCE: data["confidence"] * 100}
+                {ATTR_NAME: name, ATTR_CONFIDENCE: data.confidence * 100}
             )
 
         self.async_process_faces(known_faces, total)
