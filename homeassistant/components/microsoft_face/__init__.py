@@ -8,6 +8,14 @@ import logging
 import aiohttp
 from aiohttp.hdrs import CONTENT_TYPE
 import async_timeout
+from azure.cognitiveservices.vision.face import FaceClient
+
+# from azure.cognitiveservices.vision.face.models import (
+#    Person,
+#    QualityForRecognition,
+#    TrainingStatusType,
+# )
+from msrest.authentication import CognitiveServicesCredentials
 import voluptuous as vol
 
 from homeassistant.components import camera
@@ -295,6 +303,10 @@ class MicrosoftFace:
         self._recognition_model = recognition_model
         self._store = {}
         self._entities = entities
+        self._azure_endpoint = f"https://{server_loc}.api.cognitive.microsoft.com"
+        self.face_client = FaceClient(
+            self._azure_endpoint, CognitiveServicesCredentials(self._api_key)
+        )
 
     @property
     def detection_model(self):
@@ -313,27 +325,32 @@ class MicrosoftFace:
 
     async def update_store(self):
         """Load all group/person data into local store."""
-        groups = await self.call_api(
-            "get",
-            "persongroups",
-            params={"returnRecognitionModel": "true"},
+        groups = await self.hass.async_add_executor_job(
+            self.face_client.person_group.list, None, None, True
         )
 
         tasks = []
         for group in groups:
-            g_id = group["personGroupId"]
-            self._store[g_id] = {}
-            self._entities[g_id] = MicrosoftFaceGroupEntity(
-                self.hass, self, g_id, group["name"], group["recognitionModel"]
+            self._store[group.person_group_id] = {}
+            self._entities[group.person_group_id] = MicrosoftFaceGroupEntity(
+                self.hass,
+                self,
+                group.person_group_id,
+                group.name,
+                group.recognition_model,
             )
 
-            persons = await self.call_api("get", f"persongroups/{g_id}/persons")
+            persons = await self.hass.async_add_executor_job(
+                self.face_client.person_group_person.list, group.person_group_id
+            )
 
             for person in persons:
-                self._store[g_id][person["name"]] = person["personId"]
+                self._store[group.person_group_id][person.name] = person.person_id
 
             tasks.append(
-                asyncio.create_task(self._entities[g_id].async_update_ha_state())
+                asyncio.create_task(
+                    self._entities[group.person_group_id].async_update_ha_state()
+                )
             )
 
         if tasks:

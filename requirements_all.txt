@@ -360,6 +360,9 @@ av==9.0.0
 # homeassistant.components.axis
 axis==44
 
+# homeassistant.components.microsoft_face
+azure-cognitiveservices-vision-face==0.6.0
+
 # homeassistant.components.azure_event_hub
 azure-eventhub==5.7.0
 

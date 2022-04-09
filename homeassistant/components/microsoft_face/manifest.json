@@ -3,6 +3,7 @@
   "name": "Microsoft Face",
   "documentation": "https://www.home-assistant.io/integrations/microsoft_face",
   "dependencies": ["camera"],
+  "requirements": ["azure-cognitiveservices-vision-face==0.6.0"],
   "codeowners": [],
   "iot_class": "cloud_push"
 }
