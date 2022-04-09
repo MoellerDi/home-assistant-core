@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import logging
 
@@ -221,12 +222,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         try:
             image = await camera.async_get_image(hass, camera_entity)
 
-            await face.call_api(
-                "post",
-                f"persongroups/{g_id}/persons/{p_id}/persistedFaces",
-                image.content,
-                binary=True,
-                params={"detectionModel": face.detection_model},
+            await hass.async_add_executor_job(
+                face.face_client.person_group_person.add_face_from_stream,
+                g_id,
+                p_id,
+                io.BytesIO(bytearray(image.content)),
+                None,
+                None,
+                face.detection_model,
             )
         except HomeAssistantError as err:
             _LOGGER.error(
