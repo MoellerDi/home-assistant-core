@@ -63,8 +63,12 @@ SUPPORTED_ATTRIBUTES = [
     ATTR_SMILE,
 ]
 
+SUPPORTED_RECOGNITION_MODELS = ["detection_01", "detection_02", "detection_03"]
+
 CONF_ATTRIBUTES = "attributes"
 DEFAULT_ATTRIBUTES = [ATTR_AGE, ATTR_GENDER]
+CONF_DETECTION_MODEL = "detection_model"
+DEFAULT_DETECTION_MODEL = "detection_01"
 
 
 def validate_attributes(list_attributes):
@@ -75,11 +79,21 @@ def validate_attributes(list_attributes):
     return list_attributes
 
 
+def validate_detection_model(detection_model):
+    """Validate face detection_model."""
+    if detection_model not in SUPPORTED_RECOGNITION_MODELS:
+        raise vol.Invalid(f"Invalid attribute {detection_model}")
+    return detection_model
+
+
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_ATTRIBUTES, default=DEFAULT_ATTRIBUTES): vol.All(
             cv.ensure_list, validate_attributes
-        )
+        ),
+        vol.Optional(CONF_DETECTION_MODEL, default=DEFAULT_DETECTION_MODEL): vol.All(
+            cv.string, validate_detection_model
+        ),
     }
 )
 
@@ -93,12 +107,17 @@ async def async_setup_platform(
     """Set up the Microsoft Face detection platform."""
     api = hass.data[DATA_MICROSOFT_FACE]
     attributes = config[CONF_ATTRIBUTES]
+    detection_model = config[CONF_DETECTION_MODEL]
 
     entities = []
     for camera in config[CONF_SOURCE]:
         entities.append(
             MicrosoftFaceDetectEntity(
-                camera[CONF_ENTITY_ID], api, attributes, camera.get(CONF_NAME)
+                camera[CONF_ENTITY_ID],
+                api,
+                attributes,
+                detection_model,
+                camera.get(CONF_NAME),
             )
         )
 
@@ -108,13 +127,14 @@ async def async_setup_platform(
 class MicrosoftFaceDetectEntity(ImageProcessingFaceEntity):
     """Microsoft Face API entity for identify."""
 
-    def __init__(self, camera_entity, api, attributes, name=None):
+    def __init__(self, camera_entity, api, attributes, detection_model, name=None):
         """Initialize Microsoft Face."""
         super().__init__()
 
         self._api = api
         self._camera = camera_entity
         self._attributes = attributes
+        self._detection_model = detection_model
 
         if name:
             self._name = name
@@ -156,9 +176,9 @@ class MicrosoftFaceDetectEntity(ImageProcessingFaceEntity):
                 True,
                 False,
                 {"mask"},  # FaceAttributeType.mask,
-                self._api.recognition_model,
+                None,  # self._api.recognition_model,
                 True,
-                self._api.detection_model,
+                self._detection_model,
             )
 
         except HomeAssistantError as err:
