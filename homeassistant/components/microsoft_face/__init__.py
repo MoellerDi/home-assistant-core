@@ -144,7 +144,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         g_id = slugify(service.data[ATTR_NAME])
 
         try:
-            await face.call_api("delete", f"persongroups/{g_id}")
+            await hass.async_add_executor_job(
+                face.face_client.person_group.delete, g_id
+            )
+
             face.store.pop(g_id)
 
             entity = entities.pop(g_id)
