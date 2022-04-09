@@ -1,8 +1,16 @@
 """Component that will help set the Microsoft face detect processing."""
 from __future__ import annotations
 
+import io
 import logging
 
+# from azure.cognitiveservices.vision.face.models import (
+#     DetectedFace,
+#     FaceAttributeType,
+#     Person,
+#     QualityForRecognition,
+#     TrainingStatusType,
+# )
 import voluptuous as vol
 
 from homeassistant.components.image_processing import (
@@ -128,35 +136,58 @@ class MicrosoftFaceDetectEntity(ImageProcessingFaceEntity):
 
         This method is a coroutine.
         """
-        face_data = None
+        # face_data = None
         try:
-            face_data = await self._api.call_api(
-                "post",
-                "detect",
-                image,
-                binary=True,
-                params={
-                    "returnFaceAttributes": ",".join(self._attributes),
-                    "detectionModel": self._api.detection_model,
-                    "recognitionModel": self._api.recognition_model,
-                },
+            # face_data = await self._api.call_api(
+            #     "post",
+            #     "detect",
+            #     image,
+            #     binary=True,
+            #     params={
+            #         "returnFaceAttributes": ",".join(self._attributes),
+            #         "detectionModel": self._api.detection_model,
+            #         "recognitionModel": self._api.recognition_model,
+            #     },
+            # )
+
+            detected_face = await self.hass.async_add_executor_job(
+                self._api.face_client.face.detect_with_stream,
+                io.BytesIO(bytearray(image)),
+                True,
+                False,
+                {"mask"},  # FaceAttributeType.mask,
+                self._api.recognition_model,
+                True,
+                self._api.detection_model,
             )
 
         except HomeAssistantError as err:
             _LOGGER.error("Can't process image on microsoft face: %s", err)
             return
 
-        if not face_data:
-            face_data = []
+        # if not face_data:
+        #     face_data = []
+
+        # faces = []
+        # for face in face_data:
+        #     face_attr = {}
+        #     for attr in self._attributes:
+        #         if attr in face["faceAttributes"]:
+        #             face_attr[attr] = face["faceAttributes"][attr]
+
+        #     if face_attr:
+        #         faces.append(face_attr)
+
+        # self.async_process_faces(faces, len(face_data))
 
         faces = []
-        for face in face_data:
+        for face in detected_face:
             face_attr = {}
             for attr in self._attributes:
-                if attr in face["faceAttributes"]:
-                    face_attr[attr] = face["faceAttributes"][attr]
+                if attr in face.face_attributes.as_dict():
+                    face_attr[attr] = face.face_attributes.as_dict()[attr]
 
             if face_attr:
                 faces.append(face_attr)
 
-        self.async_process_faces(faces, len(face_data))
+        self.async_process_faces(faces, len(detected_face))
