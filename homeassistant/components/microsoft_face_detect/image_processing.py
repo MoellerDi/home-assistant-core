@@ -4,15 +4,15 @@ from __future__ import annotations
 import io
 import logging
 
-# from azure.cognitiveservices.vision.face.models import (
-#     DetectedFace,
-#     FaceAttributeType,
-#     Person,
-#     QualityForRecognition,
-#     TrainingStatusType,
-# )
+from azure.cognitiveservices.vision.face import FaceClient
+from azure.cognitiveservices.vision.face.models import (
+    DetectedFace,
+    DetectionModel,
+    FaceAttributes,
+)
 import voluptuous as vol
 
+from homeassistant.components.camera import Camera
 from homeassistant.components.image_processing import (
     ATTR_AGE,
     ATTR_GENDER,
@@ -131,10 +131,10 @@ class MicrosoftFaceDetectEntity(ImageProcessingFaceEntity):
         """Initialize Microsoft Face."""
         super().__init__()
 
-        self._api = api
-        self._camera = camera_entity
-        self._attributes = attributes
-        self._detection_model = detection_model
+        self._face_client: FaceClient = api.face_client
+        self._camera: Camera = camera_entity
+        self._attributes: FaceAttributes = attributes
+        self._detection_model: DetectionModel = detection_model
 
         if name:
             self._name = name
@@ -156,27 +156,14 @@ class MicrosoftFaceDetectEntity(ImageProcessingFaceEntity):
 
         This method is a coroutine.
         """
-        # face_data = None
         try:
-            # face_data = await self._api.call_api(
-            #     "post",
-            #     "detect",
-            #     image,
-            #     binary=True,
-            #     params={
-            #         "returnFaceAttributes": ",".join(self._attributes),
-            #         "detectionModel": self._api.detection_model,
-            #         "recognitionModel": self._api.recognition_model,
-            #     },
-            # )
-
-            detected_face = await self.hass.async_add_executor_job(
-                self._api.face_client.face.detect_with_stream,
+            detected_faces: DetectedFace = await self.hass.async_add_executor_job(
+                self._face_client.face.detect_with_stream,
                 io.BytesIO(bytearray(image)),
                 True,
                 False,
-                {"mask"},  # FaceAttributeType.mask,
-                None,  # self._api.recognition_model,
+                self._attributes,
+                None,
                 True,
                 self._detection_model,
             )
@@ -185,23 +172,9 @@ class MicrosoftFaceDetectEntity(ImageProcessingFaceEntity):
             _LOGGER.error("Can't process image on microsoft face: %s", err)
             return
 
-        # if not face_data:
-        #     face_data = []
-
-        # faces = []
-        # for face in face_data:
-        #     face_attr = {}
-        #     for attr in self._attributes:
-        #         if attr in face["faceAttributes"]:
-        #             face_attr[attr] = face["faceAttributes"][attr]
-
-        #     if face_attr:
-        #         faces.append(face_attr)
-
-        # self.async_process_faces(faces, len(face_data))
-
         faces = []
-        for face in detected_face:
+        face: DetectedFace
+        for face in detected_faces:
             face_attr = {}
             for attr in self._attributes:
                 if attr in face.face_attributes.as_dict():
@@ -210,4 +183,4 @@ class MicrosoftFaceDetectEntity(ImageProcessingFaceEntity):
             if face_attr:
                 faces.append(face_attr)
 
-        self.async_process_faces(faces, len(detected_face))
+        self.async_process_faces(faces, len(detected_faces))
