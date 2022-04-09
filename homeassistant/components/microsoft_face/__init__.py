@@ -118,11 +118,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         g_id = slugify(name)
 
         try:
-            await face.call_api(
-                "put",
-                f"persongroups/{g_id}",
-                {"name": name, "recognitionModel": face.recognition_model},
+            await hass.async_add_executor_job(
+                face.face_client.person_group.create,
+                g_id,
+                name,
+                None,
+                face.recognition_model,
             )
+
             face.store[g_id] = {}
 
             entities[g_id] = MicrosoftFaceGroupEntity(
