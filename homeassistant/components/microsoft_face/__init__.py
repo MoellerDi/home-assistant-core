@@ -164,7 +164,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         g_id = service.data[ATTR_GROUP]
 
         try:
-            await face.call_api("post", f"persongroups/{g_id}/train")
+            await hass.async_add_executor_job(face.face_client.person_group.train, g_id)
         except HomeAssistantError as err:
             _LOGGER.error("Can't train group '%s' with error: %s", g_id, err)
 
