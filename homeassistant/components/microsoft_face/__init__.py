@@ -6,7 +6,11 @@ import io
 import logging
 
 from azure.cognitiveservices.vision.face import FaceClient
-from azure.cognitiveservices.vision.face.models import Person, PersonGroup
+from azure.cognitiveservices.vision.face.models import (
+    APIErrorException,
+    Person,
+    PersonGroup,
+)
 from msrest.authentication import CognitiveServicesCredentials
 import voluptuous as vol
 
@@ -103,8 +107,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     face = MicrosoftFace(
         hass,
         config[DOMAIN].get(CONF_AZURE_REGION),
-        # config[DOMAIN].get(CONF_AZURE_DETECTION_MODEL),
-        # config[DOMAIN].get(CONF_AZURE_RECOGNITION_MODEL),
         config[DOMAIN].get(CONF_API_KEY),
         config[DOMAIN].get(CONF_TIMEOUT),
         entities,
@@ -143,8 +145,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 hass, face, g_id, name, recognition_model
             )
             entities[g_id].async_write_ha_state()
-        except HomeAssistantError as err:
+        except APIErrorException as err:
             _LOGGER.error("Can't create group '%s' with error: %s", g_id, err)
+        # except HomeAssistantError as err:
+        #    _LOGGER.error("Can't create group '%s' with error: %s", g_id, err)
 
     hass.services.async_register(
         DOMAIN, SERVICE_CREATE_GROUP, async_create_group, schema=SCHEMA_GROUP_SERVICE
@@ -163,8 +167,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             entity = entities.pop(g_id)
             hass.states.async_remove(entity.entity_id, service.context)
-        except HomeAssistantError as err:
+        except APIErrorException as err:
             _LOGGER.error("Can't delete group '%s' with error: %s", g_id, err)
+        # except HomeAssistantError as err:
+        #    _LOGGER.error("Can't delete group '%s' with error: %s", g_id, err)
 
     hass.services.async_register(
         DOMAIN, SERVICE_DELETE_GROUP, async_delete_group, schema=SCHEMA_GROUP_SERVICE
@@ -176,8 +182,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         try:
             await hass.async_add_executor_job(face.face_client.person_group.train, g_id)
-        except HomeAssistantError as err:
+        except APIErrorException as err:
             _LOGGER.error("Can't train group '%s' with error: %s", g_id, err)
+        # except HomeAssistantError as err:
+        #    _LOGGER.error("Can't train group '%s' with error: %s", g_id, err)
 
     hass.services.async_register(
         DOMAIN, SERVICE_TRAIN_GROUP, async_train_group, schema=SCHEMA_TRAIN_SERVICE
@@ -195,8 +203,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             face.store[g_id][name] = person.person_id
             entities[g_id].async_write_ha_state()
-        except HomeAssistantError as err:
+        except APIErrorException as err:
             _LOGGER.error("Can't create person '%s' with error: %s", name, err)
+        # except HomeAssistantError as err:
+        #    _LOGGER.error("Can't create person '%s' with error: %s", name, err)
 
     hass.services.async_register(
         DOMAIN, SERVICE_CREATE_PERSON, async_create_person, schema=SCHEMA_PERSON_SERVICE
@@ -215,8 +225,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             face.store[g_id].pop(name)
             entities[g_id].async_write_ha_state()
-        except HomeAssistantError as err:
+        except APIErrorException as err:
             _LOGGER.error("Can't delete person '%s' with error: %s", p_id, err)
+        # except HomeAssistantError as err:
+        #    _LOGGER.error("Can't delete person '%s' with error: %s", p_id, err)
 
     hass.services.async_register(
         DOMAIN, SERVICE_DELETE_PERSON, async_delete_person, schema=SCHEMA_PERSON_SERVICE
@@ -246,10 +258,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 None,
                 detection_model,
             )
-        except HomeAssistantError as err:
+        except APIErrorException as err:
             _LOGGER.error(
                 "Can't add an image of a person '%s' with error: %s", p_id, err
             )
+        # except HomeAssistantError as err:
+        #    _LOGGER.error(
+        #        "Can't add an image of a person '%s' with error: %s", p_id, err
+        #    )
 
     hass.services.async_register(
         DOMAIN, SERVICE_FACE_PERSON, async_face_person, schema=SCHEMA_FACE_SERVICE
