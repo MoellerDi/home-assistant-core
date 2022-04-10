@@ -26,6 +26,7 @@ ATTR_CAMERA_ENTITY = "camera_entity"
 ATTR_GROUP = "group"
 ATTR_PERSON = "person"
 ATTR_RECOGNITION_MODEL = "recognition_model"
+ATTR_DETECTION_MODEL = "detection_model"
 
 # CONF_AZURE_DETECTION_MODEL = "azure_detection_model"
 # CONF_AZURE_RECOGNITION_MODEL = "azure_recognition_model"
@@ -89,6 +90,7 @@ SCHEMA_FACE_SERVICE = vol.Schema(
         vol.Required(ATTR_PERSON): cv.string,
         vol.Required(ATTR_GROUP): cv.slugify,
         vol.Required(ATTR_CAMERA_ENTITY): cv.entity_id,
+        vol.Optional(ATTR_DETECTION_MODEL): cv.string,
     }
 )
 
@@ -225,6 +227,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         g_id = service.data[ATTR_GROUP]
         p_id = face.store[g_id].get(service.data[ATTR_PERSON])
 
+        if ATTR_DETECTION_MODEL not in service.data:
+            detection_model = DEFAULT_AZURE_DETECTION_MODEL
+        else:
+            detection_model = service.data[ATTR_DETECTION_MODEL]
+
         camera_entity = service.data[ATTR_CAMERA_ENTITY]
 
         try:
@@ -237,7 +244,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 io.BytesIO(bytearray(image.content)),
                 None,
                 None,
-                # face.detection_model, #TO-DO: add as option inn service call
+                detection_model,
             )
         except HomeAssistantError as err:
             _LOGGER.error(

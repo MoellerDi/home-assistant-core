@@ -88,6 +88,13 @@ face_person:
       example: Hans
       selector:
         text:
+    detection_model:
+      name: Detection Model
+      description: Optional Detection Model for face detection (default to detection_01).
+      required: false
+      example: detection_01
+      selector:
+        text:
 train_group:
   name: Train group
   description: Train a person group.
