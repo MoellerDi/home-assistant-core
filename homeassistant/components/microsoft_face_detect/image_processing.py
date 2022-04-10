@@ -20,7 +20,11 @@ from homeassistant.components.image_processing import (
     PLATFORM_SCHEMA,
     ImageProcessingFaceEntity,
 )
-from homeassistant.components.microsoft_face import DATA_MICROSOFT_FACE
+from homeassistant.components.microsoft_face import (
+    DATA_MICROSOFT_FACE,
+    DEFAULT_AZURE_DETECTION_MODEL,
+    SUPPORTED_DETECTION_MODEL,
+)
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, CONF_SOURCE
 from homeassistant.core import HomeAssistant, split_entity_id
 from homeassistant.exceptions import HomeAssistantError
@@ -63,12 +67,9 @@ SUPPORTED_ATTRIBUTES = [
     ATTR_SMILE,
 ]
 
-SUPPORTED_RECOGNITION_MODELS = ["detection_01", "detection_02", "detection_03"]
-
 CONF_ATTRIBUTES = "attributes"
-DEFAULT_ATTRIBUTES = [ATTR_AGE, ATTR_GENDER]
 CONF_DETECTION_MODEL = "detection_model"
-DEFAULT_DETECTION_MODEL = "detection_01"
+DEFAULT_ATTRIBUTES = [ATTR_AGE, ATTR_GENDER]
 
 
 def validate_attributes(list_attributes):
@@ -81,7 +82,7 @@ def validate_attributes(list_attributes):
 
 def validate_detection_model(detection_model):
     """Validate face detection_model."""
-    if detection_model not in SUPPORTED_RECOGNITION_MODELS:
+    if detection_model not in SUPPORTED_DETECTION_MODEL:
         raise vol.Invalid(f"Invalid attribute {detection_model}")
     return detection_model
 
@@ -91,9 +92,9 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_ATTRIBUTES, default=DEFAULT_ATTRIBUTES): vol.All(
             cv.ensure_list, validate_attributes
         ),
-        vol.Optional(CONF_DETECTION_MODEL, default=DEFAULT_DETECTION_MODEL): vol.All(
-            cv.string, validate_detection_model
-        ),
+        vol.Optional(
+            CONF_DETECTION_MODEL, default=DEFAULT_AZURE_DETECTION_MODEL
+        ): vol.All(cv.string, validate_detection_model),
     }
 )
 

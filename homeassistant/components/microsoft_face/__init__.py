@@ -27,11 +27,18 @@ ATTR_GROUP = "group"
 ATTR_PERSON = "person"
 ATTR_RECOGNITION_MODEL = "recognition_model"
 
-CONF_AZURE_DETECTION_MODEL = "azure_detection_model"
-CONF_AZURE_RECOGNITION_MODEL = "azure_recognition_model"
+# CONF_AZURE_DETECTION_MODEL = "azure_detection_model"
+# CONF_AZURE_RECOGNITION_MODEL = "azure_recognition_model"
 CONF_AZURE_REGION = "azure_region"
 DEFAULT_AZURE_DETECTION_MODEL = "detection_01"
 DEFAULT_AZURE_RECOGNITION_MODEL = "recognition_01"
+SUPPORTED_DETECTION_MODEL = ["detection_01", "detection_02", "detection_03"]
+SUPPORTED_RECOGNITION_MODELS = [
+    "recognition_01",
+    "recognition_02",
+    "recognition_03",
+    "recognition_04",
+]
 
 DATA_MICROSOFT_FACE = "microsoft_face"
 DEFAULT_TIMEOUT = 10
@@ -52,13 +59,13 @@ CONFIG_SCHEMA = vol.Schema(
             {
                 vol.Required(CONF_API_KEY): cv.string,
                 vol.Optional(CONF_AZURE_REGION, default="westus"): cv.string,
-                vol.Optional(
-                    CONF_AZURE_DETECTION_MODEL, default=DEFAULT_AZURE_DETECTION_MODEL
-                ): cv.string,
-                vol.Optional(
-                    CONF_AZURE_RECOGNITION_MODEL,
-                    default=DEFAULT_AZURE_RECOGNITION_MODEL,
-                ): cv.string,
+                # vol.Optional(
+                #    CONF_AZURE_DETECTION_MODEL, default=DEFAULT_AZURE_DETECTION_MODEL
+                # ): cv.string,
+                # vol.Optional(
+                #    CONF_AZURE_RECOGNITION_MODEL,
+                #    default=DEFAULT_AZURE_RECOGNITION_MODEL,
+                # ): cv.string,
                 vol.Optional(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): cv.positive_int,
             }
         )
@@ -94,8 +101,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     face = MicrosoftFace(
         hass,
         config[DOMAIN].get(CONF_AZURE_REGION),
-        config[DOMAIN].get(CONF_AZURE_DETECTION_MODEL),
-        config[DOMAIN].get(CONF_AZURE_RECOGNITION_MODEL),
+        # config[DOMAIN].get(CONF_AZURE_DETECTION_MODEL),
+        # config[DOMAIN].get(CONF_AZURE_RECOGNITION_MODEL),
         config[DOMAIN].get(CONF_API_KEY),
         config[DOMAIN].get(CONF_TIMEOUT),
         entities,
@@ -230,7 +237,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 io.BytesIO(bytearray(image.content)),
                 None,
                 None,
-                face.detection_model,
+                # face.detection_model, #TO-DO: add as option inn service call
             )
         except HomeAssistantError as err:
             _LOGGER.error(
@@ -299,8 +306,8 @@ class MicrosoftFace:
         self,
         hass,
         server_loc,
-        detection_model,
-        recognition_model,
+        # detection_model,
+        # recognition_model,
         api_key,
         timeout,
         entities,
@@ -311,8 +318,8 @@ class MicrosoftFace:
         self.timeout = timeout
         self._api_key = api_key
         self._server_url = f"https://{server_loc}.{FACE_API_URL}"
-        self._detection_model = detection_model
-        self._recognition_model = recognition_model
+        # self._detection_model = detection_model
+        # self._recognition_model = recognition_model
         self._store = {}
         self._entities = entities
         self._azure_endpoint = f"https://{server_loc}.api.cognitive.microsoft.com"
@@ -320,15 +327,15 @@ class MicrosoftFace:
             self._azure_endpoint, CognitiveServicesCredentials(self._api_key)
         )
 
-    @property
-    def detection_model(self):
-        """Return Azure detectionModel."""
-        return self._detection_model
+    # @property
+    # def detection_model(self):
+    #    """Return Azure detectionModel."""
+    #    return self._detection_model
 
-    @property
-    def recognition_model(self):
-        """Return Azure recognitionModel."""
-        return self._recognition_model
+    # @property
+    # def recognition_model(self):
+    #    """Return Azure recognitionModel."""
+    #    return self._recognition_model
 
     @property
     def store(self):
