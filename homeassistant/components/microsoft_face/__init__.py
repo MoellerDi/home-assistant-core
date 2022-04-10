@@ -218,17 +218,24 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         g_id = service.data[ATTR_GROUP]
         p_id = face.store[g_id].get(name)
 
-        try:
-            await hass.async_add_executor_job(
-                face.face_client.person_group_person.delete, g_id, p_id
+        if p_id is None:
+            _LOGGER.error(
+                "Can't delete person '%s' with error: person not found in group '%s'",
+                name,
+                g_id,
             )
+        else:
+            try:
+                await hass.async_add_executor_job(
+                    face.face_client.person_group_person.delete, g_id, p_id
+                )
 
-            face.store[g_id].pop(name)
-            entities[g_id].async_write_ha_state()
-        except APIErrorException as err:
-            _LOGGER.error("Can't delete person '%s' with error: %s", p_id, err)
-        # except HomeAssistantError as err:
-        #    _LOGGER.error("Can't delete person '%s' with error: %s", p_id, err)
+                face.store[g_id].pop(name)
+                entities[g_id].async_write_ha_state()
+            except APIErrorException as err:
+                _LOGGER.error("Can't delete person '%s' with error: %s", p_id, err)
+            # except HomeAssistantError as err:
+            #    _LOGGER.error("Can't delete person '%s' with error: %s", p_id, err)
 
     hass.services.async_register(
         DOMAIN, SERVICE_DELETE_PERSON, async_delete_person, schema=SCHEMA_PERSON_SERVICE
