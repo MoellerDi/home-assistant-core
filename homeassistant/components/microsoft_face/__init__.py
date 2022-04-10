@@ -294,7 +294,7 @@ class MicrosoftFaceGroupEntity(Entity):
     @property
     def state_attributes(self):
         """Return device specific state attributes."""
-        return {"recognition_model": self._recognition_model}
+        return {ATTR_RECOGNITION_MODEL: self._recognition_model}
 
     @property
     def extra_state_attributes(self):

@@ -4,6 +4,13 @@ from __future__ import annotations
 import io
 import logging
 
+# from azure.cognitiveservices.vision.face import FaceClient
+# from azure.cognitiveservices.vision.face.models import (
+#     DetectedFace,
+#     DetectionModel,
+#     FaceAttributes,
+#     PersonGroup,
+# )
 import voluptuous as vol
 
 from homeassistant.components.image_processing import (
@@ -12,7 +19,15 @@ from homeassistant.components.image_processing import (
     PLATFORM_SCHEMA,
     ImageProcessingFaceEntity,
 )
-from homeassistant.components.microsoft_face import DATA_MICROSOFT_FACE
+from homeassistant.components.microsoft_face import (
+    ATTR_RECOGNITION_MODEL,
+    DATA_MICROSOFT_FACE,
+    DEFAULT_AZURE_DETECTION_MODEL,
+    DEFAULT_AZURE_RECOGNITION_MODEL,
+    SUPPORTED_DETECTION_MODEL,
+    MicrosoftFace,
+    MicrosoftFaceGroupEntity,
+)
 from homeassistant.const import ATTR_NAME, CONF_ENTITY_ID, CONF_NAME, CONF_SOURCE
 from homeassistant.core import HomeAssistant, split_entity_id
 from homeassistant.exceptions import HomeAssistantError
@@ -23,8 +38,24 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 _LOGGER = logging.getLogger(__name__)
 
 CONF_GROUP = "group"
+CONF_DETECTION_MODEL = "detection_model"
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({vol.Required(CONF_GROUP): cv.slugify})
+
+def validate_detection_model(detection_model):
+    """Validate face detection_model."""
+    if detection_model not in SUPPORTED_DETECTION_MODEL:
+        raise vol.Invalid(f"Invalid attribute {detection_model}")
+    return detection_model
+
+
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+    {
+        vol.Required(CONF_GROUP): cv.slugify,
+        vol.Optional(
+            CONF_DETECTION_MODEL, default=DEFAULT_AZURE_DETECTION_MODEL
+        ): vol.All(cv.string, validate_detection_model),
+    }
+)
 
 
 async def async_setup_platform(
@@ -37,6 +68,7 @@ async def async_setup_platform(
     api = hass.data[DATA_MICROSOFT_FACE]
     face_group = config[CONF_GROUP]
     confidence = config[CONF_CONFIDENCE]
+    detection_model = config[CONF_DETECTION_MODEL]
 
     entities = []
     for camera in config[CONF_SOURCE]:
@@ -46,6 +78,7 @@ async def async_setup_platform(
                 api,
                 face_group,
                 confidence,
+                detection_model,
                 camera.get(CONF_NAME),
             )
         )
@@ -56,19 +89,33 @@ async def async_setup_platform(
 class MicrosoftFaceIdentifyEntity(ImageProcessingFaceEntity):
     """Representation of the Microsoft Face API entity for identify."""
 
-    def __init__(self, camera_entity, api, face_group, confidence, name=None):
+    def __init__(
+        self, camera_entity, api, face_group, confidence, detection_model, name=None
+    ):
         """Initialize the Microsoft Face API."""
         super().__init__()
 
-        self._api = api
+        self._api: MicrosoftFace = api
         self._camera = camera_entity
         self._confidence = confidence
         self._face_group = face_group
+        self._detection_model = detection_model
+        self._recognition_model = DEFAULT_AZURE_RECOGNITION_MODEL
 
         if name:
             self._name = name
         else:
             self._name = f"MicrosoftFace {split_entity_id(camera_entity)[1]}"
+
+        # read state_attributes 'recognition_model' from entity
+        for item in self._api._entities.items():
+            group: MicrosoftFaceGroupEntity = item[1]
+            if group._id == self._face_group:
+                if ATTR_RECOGNITION_MODEL in group.state_attributes:
+                    self._recognition_model = group.state_attributes[
+                        ATTR_RECOGNITION_MODEL
+                    ]
+                break
 
     @property
     def confidence(self):
@@ -108,9 +155,9 @@ class MicrosoftFaceIdentifyEntity(ImageProcessingFaceEntity):
                 True,
                 False,
                 None,
-                self._api.recognition_model,
+                self._recognition_model,
                 True,
-                self._api.detection_model,
+                self._detection_model,
             )
 
             # if face_data:
