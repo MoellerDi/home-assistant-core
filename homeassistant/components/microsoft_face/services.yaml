@@ -9,6 +9,13 @@ create_group:
       example: family
       selector:
         text:
+    recognition_model:
+      name: Recognition Model
+      description: Optional Recognition Model of the group (default to recognition_01).
+      required: false
+      example: recognition_01
+      selector:
+        text:
 create_person:
   name: Create person
   description: Create a new person in the group.

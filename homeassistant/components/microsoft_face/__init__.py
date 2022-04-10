@@ -25,6 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 ATTR_CAMERA_ENTITY = "camera_entity"
 ATTR_GROUP = "group"
 ATTR_PERSON = "person"
+ATTR_RECOGNITION_MODEL = "recognition_model"
 
 CONF_AZURE_DETECTION_MODEL = "azure_detection_model"
 CONF_AZURE_RECOGNITION_MODEL = "azure_recognition_model"
@@ -65,7 +66,12 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
-SCHEMA_GROUP_SERVICE = vol.Schema({vol.Required(ATTR_NAME): cv.string})
+SCHEMA_GROUP_SERVICE = vol.Schema(
+    {
+        vol.Required(ATTR_NAME): cv.string,
+        vol.Optional(ATTR_RECOGNITION_MODEL): cv.string,
+    }
+)
 
 SCHEMA_PERSON_SERVICE = SCHEMA_GROUP_SERVICE.extend(
     {vol.Required(ATTR_GROUP): cv.slugify}
@@ -108,6 +114,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         """Create a new person group."""
         name = service.data[ATTR_NAME]
         g_id = slugify(name)
+        if ATTR_RECOGNITION_MODEL not in service.data:
+            recognition_model = DEFAULT_AZURE_RECOGNITION_MODEL
+        else:
+            recognition_model = service.data[ATTR_RECOGNITION_MODEL]
 
         try:
             await hass.async_add_executor_job(
@@ -115,13 +125,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 g_id,
                 name,
                 None,
-                face.recognition_model,
+                recognition_model,
             )
 
             face.store[g_id] = {}
 
             entities[g_id] = MicrosoftFaceGroupEntity(
-                hass, face, g_id, name, face.detection_model
+                hass, face, g_id, name, recognition_model
             )
             entities[g_id].async_write_ha_state()
         except HomeAssistantError as err:
