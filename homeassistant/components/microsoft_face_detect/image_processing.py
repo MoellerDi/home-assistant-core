@@ -6,6 +6,7 @@ import logging
 
 from azure.cognitiveservices.vision.face import FaceClient
 from azure.cognitiveservices.vision.face.models import (
+    APIErrorException,
     DetectedFace,
     DetectionModel,
     FaceAttributes,
@@ -168,7 +169,9 @@ class MicrosoftFaceDetectEntity(ImageProcessingFaceEntity):
                 True,
                 self._detection_model,
             )
-
+        except APIErrorException as err:
+            _LOGGER.error("Can't process image on microsoft face: %s", err)
+            return
         except HomeAssistantError as err:
             _LOGGER.error("Can't process image on microsoft face: %s", err)
             return

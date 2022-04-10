@@ -4,13 +4,7 @@ from __future__ import annotations
 import io
 import logging
 
-# from azure.cognitiveservices.vision.face import FaceClient
-# from azure.cognitiveservices.vision.face.models import (
-#     DetectedFace,
-#     DetectionModel,
-#     FaceAttributes,
-#     PersonGroup,
-# )
+from azure.cognitiveservices.vision.face.models import APIErrorException
 import voluptuous as vol
 
 from homeassistant.components.image_processing import (
@@ -175,7 +169,9 @@ class MicrosoftFaceIdentifyEntity(ImageProcessingFaceEntity):
                 detect = await self.hass.async_add_executor_job(
                     self._api.face_client.face.identify, face_ids, self._face_group
                 )
-
+        except APIErrorException as err:
+            _LOGGER.error("Can't process image on Microsoft face: %s", err)
+            return
         except HomeAssistantError as err:
             _LOGGER.error("Can't process image on Microsoft face: %s", err)
             return
