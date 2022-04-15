@@ -18,7 +18,6 @@ from homeassistant.components import camera
 from homeassistant.const import ATTR_NAME, CONF_API_KEY, CONF_TIMEOUT
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.typing import ConfigType
@@ -104,11 +103,15 @@ SCHEMA_TRAIN_SERVICE = vol.Schema({vol.Required(ATTR_GROUP): cv.slugify})
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up Microsoft Face."""
     entities: dict[str, MicrosoftFaceGroupEntity] = {}
-    face = MicrosoftFace(
+
+    face_client: FaceClient = FaceClient(
+        f"https://{config[DOMAIN].get(CONF_AZURE_REGION)}.api.cognitive.microsoft.com",
+        CognitiveServicesCredentials(config[DOMAIN].get(CONF_API_KEY)),
+    )
+
+    face: MicrosoftFace = MicrosoftFace(
         hass,
-        config[DOMAIN].get(CONF_AZURE_REGION),
-        config[DOMAIN].get(CONF_API_KEY),
-        config[DOMAIN].get(CONF_TIMEOUT),
+        face_client,
         entities,
     )
 
@@ -290,7 +293,7 @@ class MicrosoftFaceGroupEntity(Entity):
         """Initialize person/group entity."""
         self.hass = hass
         self._api = api
-        self._id = g_id
+        self._id = slugify(g_id)
         self._name = name
         self._recognition_model = recognition_model
 
@@ -335,37 +338,19 @@ class MicrosoftFace:
     def __init__(
         self,
         hass,
-        server_loc,
-        # detection_model,
-        # recognition_model,
-        api_key,
-        timeout,
+        face_client: FaceClient,
         entities,
     ):
         """Initialize Microsoft Face api."""
         self.hass = hass
-        self.websession = async_get_clientsession(hass)
-        self.timeout = timeout
-        self._api_key = api_key
-        self._server_url = f"https://{server_loc}.{FACE_API_URL}"
-        # self._detection_model = detection_model
-        # self._recognition_model = recognition_model
-        self._store = {}
+        self._store: dict[object, object] = {}
         self._entities = entities
-        self._azure_endpoint = f"https://{server_loc}.api.cognitive.microsoft.com"
-        self.face_client = FaceClient(
-            self._azure_endpoint, CognitiveServicesCredentials(self._api_key)
-        )
+        self._face_client = face_client
 
-    # @property
-    # def detection_model(self):
-    #    """Return Azure detectionModel."""
-    #    return self._detection_model
-
-    # @property
-    # def recognition_model(self):
-    #    """Return Azure recognitionModel."""
-    #    return self._recognition_model
+    @property
+    def face_client(self):
+        """Return Azure Face API."""
+        return self._face_client
 
     @property
     def store(self):
@@ -374,7 +359,7 @@ class MicrosoftFace:
 
     async def update_store(self):
         """Load all group/person data into local store."""
-        groups: PersonGroup = await self.hass.async_add_executor_job(
+        groups = await self.hass.async_add_executor_job(
             self.face_client.person_group.list, None, None, True
         )
 
@@ -390,7 +375,7 @@ class MicrosoftFace:
                 group.recognition_model,
             )
 
-            persons: Person = await self.hass.async_add_executor_job(
+            persons = await self.hass.async_add_executor_job(
                 self.face_client.person_group_person.list, group.person_group_id
             )
 

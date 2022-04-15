@@ -19,7 +19,6 @@ from homeassistant.components.microsoft_face import (
     DEFAULT_AZURE_DETECTION_MODEL,
     DEFAULT_AZURE_RECOGNITION_MODEL,
     SUPPORTED_DETECTION_MODEL,
-    MicrosoftFace,
     MicrosoftFaceGroupEntity,
 )
 from homeassistant.const import ATTR_NAME, CONF_ENTITY_ID, CONF_NAME, CONF_SOURCE
@@ -89,7 +88,7 @@ class MicrosoftFaceIdentifyEntity(ImageProcessingFaceEntity):
         """Initialize the Microsoft Face API."""
         super().__init__()
 
-        self._api: MicrosoftFace = api
+        self._api = api
         self._camera = camera_entity
         self._confidence = confidence
         self._face_group = face_group
