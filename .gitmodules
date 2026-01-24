@@ -1,0 +1,3 @@
+[submodule "config/src/homeassistant-stellantis-vehicles"]
+	path = config/src/homeassistant-stellantis-vehicles
+	url = https://github.com/MoellerDi/homeassistant-stellantis-vehicles
